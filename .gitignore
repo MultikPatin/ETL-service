@@ -167,3 +167,5 @@ cython_debug/
 #Логирование
 logs/
 
+infra/db/
+!/src/etl/state.json

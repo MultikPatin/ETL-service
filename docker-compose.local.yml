@@ -1,0 +1,80 @@
+version: "3.9"
+name: app
+services:
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: ${POSTGRES_HOST}
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./postgres/:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - services
+
+  elastic:
+    image: elasticsearch:${ELASTIC_VERSION}
+    container_name: ${ELASTIC_HOST}
+    restart: always
+    environment:
+      - xpack.security.enabled=false
+      - "discovery.type=single-node"
+    env_file:
+      - .env
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: curl -s http://${ELASTIC_HOST}:9200 >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 50
+      start_period: 10s
+    networks:
+      - services
+
+  etl-movies:
+    &base-etl
+    build:
+      dockerfile: src/etl/Dockerfile
+    container_name: etl-movies
+    restart: always
+    environment:
+      - ETL_NAME=movies
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elastic:
+        condition: service_healthy
+    networks:
+      - services
+
+  etl-genres:
+    <<: *base-etl
+    container_name: etl-genres
+    environment:
+      - ETL_NAME=genres
+
+  etl-persons:
+    <<: *base-etl
+    container_name: etl-persons
+    environment:
+      - ETL_NAME=persons
+
+volumes:
+  postgres_data:
+  elastic_data:
+  static:
+
+networks:
+  services:
+
