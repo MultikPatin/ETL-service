@@ -76,6 +76,7 @@ if __name__ == "__main__":
                 index_data = ELASTIC_DATA
             case _:
                 raise ValueError(f"Unknown index name: {etl_name}")
+
         extractor = PostgresExtractor(
             connection=pg_conn,
             buffer_size=settings.buffer_size,
